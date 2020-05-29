@@ -1,0 +1,32 @@
+sudo: required
+dist: bionic
+language: cpp
+
+matrix:
+  include:
+    - compiler: gcc
+      addons:
+        apt:
+          update: true
+          sources:
+            - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:mhier/libboost-latest'
+          packages:
+            - g++-8
+            - boost1.68
+            - valgrind
+      env:
+      - C_COMPILER=gcc-8
+      - CXX_COMPILER=g++-8
+
+script:
+  - cmake --version
+  - mkdir build
+  - cd build
+  - env CC=${C_COMPILER} CXX=${CXX_COMPILER} cmake .. -DENABLE_COVERAGE=TRUE -DENABLE_TESTING=TRUE
+  - echo "We have" `nproc` "cores here"
+  - make -j `nproc`
+  - ctest -j `nproc` --output-on-failure
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash) -x gcov-8

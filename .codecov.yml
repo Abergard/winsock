@@ -1,0 +1,3 @@
+ignore:
+  - "src/main.cpp"
+  - "src/main-win32.cpp"

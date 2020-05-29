@@ -1,0 +1,71 @@
+skip_tags: true
+
+version: '0.0.{build}'
+
+image:
+  - Visual Studio 2019
+
+build:
+  verbosity: detailed
+
+environment:
+  package_name: winsock.exe
+
+  matrix:
+    - c_compiler: clang-cl
+      cxx_compiler: clang-cl
+
+    - c_compiler: cl
+      cxx_compiler: cl
+
+platform:
+  - x86
+  - x64
+
+configuration:
+  - Debug
+  - Release
+
+cache:
+  - c:\projects\deps -> .appveyor.yml
+
+install:
+  - set NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-win.zip"
+  - set DEPS_DIR=C:\projects\deps
+
+  - if not exist %DEPS_DIR% (
+      mkdir %DEPS_DIR% &&
+      cd %DEPS_DIR% &&
+      appveyor DownloadFile %NINJA_URL% -FileName ninja.zip &&
+      7z x ninja.zip -o%DEPS_DIR%\ninja > nul )
+
+  - set BOOST_ROOT=C:\Libraries\boost_1_71_0
+  - set NINJA_BIN=%DEPS_DIR%\ninja
+  - set PATH=%NINJA_BIN%;%PATH%
+
+  - ninja --version
+  - clang-cl -v
+
+before_build:
+  - call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+  - cd %APPVEYOR_BUILD_FOLDER%
+  - git submodule init
+  - git submodule update
+
+build_script:
+  - nproc
+  - mkdir build
+  - cd build
+  - cmake .. -GNinja -DCMAKE_BUILD_TYPE=%CONFIGURATION%
+                     -DCMAKE_CXX_COMPILER=%CXX_COMPILER%
+                     -DCMAKE_C_COMPILER=%C_COMPILER%
+                     -DENABLE_TESTING=TRUE
+                     -Dgtest_force_shared_crt=ON
+
+  - cmake --build . --config %CONFIGURATION% -j 2
+
+test_script:
+  - ctest --output-on-failure -j 2
+
+matrix:
+  fast_finish: true
